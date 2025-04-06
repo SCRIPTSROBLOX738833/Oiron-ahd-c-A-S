@@ -2704,6 +2704,11 @@ end
 
 
 -- دالة لتحميل الصورة باستخدام assetId
+
+
+local RedzLib = {}
+
+-- دالة لتحميل الصورة باستخدام assetId
 function RedzLib:SetImage(imageId)
     local imageLabel = script.Parent:FindFirstChild("ImageLabel")  -- نفترض إن في ImageLabel في الـ GUI
 
