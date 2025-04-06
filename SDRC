@@ -2703,22 +2703,5 @@ end
 
 
 
--- دالة لتحميل الصورة باستخدام assetId
-
-
-local RedzLib = {}
-
--- دالة لتحميل الصورة باستخدام assetId
-function RedzLib:SetImage(imageId)
-    local imageLabel = script.Parent:FindFirstChild("ImageLabel")  -- نفترض إن في ImageLabel في الـ GUI
-
-    if imageLabel then
-        imageLabel.Image = "rbxassetid://" .. imageId  -- بنضيف الـ assetId للصورة
-    else
-        print("ImageLabel مش موجود.")
-    end
-end
-
-return RedzLib
 
 return redzlib
