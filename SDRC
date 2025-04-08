@@ -2701,13 +2701,4 @@ function redzlib:MakeWindow(Configs)
 	return Window
 end
 
-function ProfilePicLibrary.updateProfilePicture(player, imageLabel)
-    local userId = player.UserId
-    local profilePicUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..userId.."&width=100&height=100&format=png"
-    
-    -- تعيين الصورة لليبل
-    imageLabel.Image = profilePicUrl
-end
-
-
 return redzlib
