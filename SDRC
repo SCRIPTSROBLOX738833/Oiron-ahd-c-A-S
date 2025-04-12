@@ -9,27 +9,6 @@ local Player = Players.LocalPlayer
 local PlayerMouse = Player:GetMouse()
 
 local redzlib = {
-local redzlib = {
-	Themes = {
-		Darker = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(25, 25, 25)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32.5, 32.5, 32.5)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(25, 25, 25))
-			}),
-			-- هنا بنضيف الحواف المدورة (35)
-			["Color Hub 1 UICorner"] = function(instance)
-				local corner = Instance.new("UICorner")
-				corner.CornerRadius = UDim.new(0, 35) -- هنا الحواف بقت 35
-				corner.Parent = instance
-			end,
-			["Color Hub 2"] = Color3.fromRGB(30, 30, 30),
-			["Color Stroke"] = Color3.fromRGB(40, 40, 40),
-			["Color Theme"] = Color3.fromRGB(88, 101, 242),
-			["Color Text"] = Color3.fromRGB(243, 243, 243),
-			["Color Dark Text"] = Color3.fromRGB(180, 180, 180)
-		},
-}),
 ["Color Hub 2"] = Color3.fromRGB(30, 30, 30),
 ["Color Stroke"] = Color3.fromRGB(40, 40, 40),
 ["Color Theme"] = Color3.fromRGB(88, 101, 242),
