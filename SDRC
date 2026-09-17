@@ -45,16 +45,28 @@ local redzlib = {
 			["Color Theme"] = Color3.fromRGB(150, 0, 255),
 			["Color Text"] = Color3.fromRGB(240, 240, 240),
 			["Color Dark Text"] = Color3.fromRGB(180, 180, 180)
+Monochrome = {
+	["Color Hub 1"] = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.00, Color3.fromRGB(15, 15, 18)),
+		ColorSequenceKeypoint.new(0.50, Color3.fromRGB(10, 10, 13)),
+		ColorSequenceKeypoint.new(1.00, Color3.fromRGB(6, 6, 9))
+	}),
+	["Color Hub 2"] = Color3.fromRGB(22, 22, 26),
+	["Color Stroke"] = Color3.fromRGB(230, 230, 230),
+	["Color Theme"] = Color3.fromRGB(255, 255, 255),
+	["Color Text"] = Color3.fromRGB(245, 245, 245),
+	["Color Dark Text"] = Color3.fromRGB(165, 165, 165)
+}
 		}
 	},
 	Info = {
 		Version = "1.1.0"
 	},
 	Save = {
-		UISize = {150, 150},
-		TabSize = 100,
-		Theme = "Darker"
-	},
+	UISize = {110, 94},
+	TabSize = 100,
+	Theme = "Monochrome"
+},
 	Settings = {},
 	Connection = {},
 	Instances = {},
