@@ -45,28 +45,28 @@ local redzlib = {
 			["Color Theme"] = Color3.fromRGB(150, 0, 255),
 			["Color Text"] = Color3.fromRGB(240, 240, 240),
 			["Color Dark Text"] = Color3.fromRGB(180, 180, 180)
-Monochrome = {
-	["Color Hub 1"] = ColorSequence.new({
-		ColorSequenceKeypoint.new(0.00, Color3.fromRGB(15, 15, 18)),
-		ColorSequenceKeypoint.new(0.50, Color3.fromRGB(10, 10, 13)),
-		ColorSequenceKeypoint.new(1.00, Color3.fromRGB(6, 6, 9))
-	}),
-	["Color Hub 2"] = Color3.fromRGB(22, 22, 26),
-	["Color Stroke"] = Color3.fromRGB(230, 230, 230),
-	["Color Theme"] = Color3.fromRGB(255, 255, 255),
-	["Color Text"] = Color3.fromRGB(245, 245, 245),
-	["Color Dark Text"] = Color3.fromRGB(165, 165, 165)
-}
+		},
+		Monochrome = {
+			["Color Hub 1"] = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(15, 15, 18)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(10, 10, 13)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(6, 6, 9))
+			}),
+			["Color Hub 2"] = Color3.fromRGB(22, 22, 26),
+			["Color Stroke"] = Color3.fromRGB(230, 230, 230),
+			["Color Theme"] = Color3.fromRGB(255, 255, 255),
+			["Color Text"] = Color3.fromRGB(245, 245, 245),
+			["Color Dark Text"] = Color3.fromRGB(165, 165, 165)
 		}
 	},
 	Info = {
 		Version = "1.1.0"
 	},
 	Save = {
-	UISize = {110, 94},
-	TabSize = 100,
-	Theme = "Monochrome"
-},
+		UISize = {380, 160},
+		TabSize = 100,
+		Theme = "Monochrome"
+	},
 	Settings = {},
 	Connection = {},
 	Instances = {},
@@ -1089,8 +1089,6 @@ local GetFlag, SetFlag, CheckFlag do
 			db=true;task.wait(0.1);db=false
 			
 			local Success, Encoded = pcall(function()
-				-- local _Flags = {}
-				-- for _,Flag in pairs(Flags) do _Flags[_] = Flag.Value end
 				return HttpService:JSONEncode(Flags)
 			end)
 			
@@ -1163,7 +1161,6 @@ local function MakeDrag(Instance)
 		local function Update(Input)
 			local delta = Input.Position - DragStart
 			local Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X / UIScale, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y / UIScale)
-			-- Instance.Position = Position
 			CreateTween({Instance, "Position", Position, 0.35})
 		end
 		
@@ -1231,6 +1228,7 @@ AddEle("Stroke", function(parent, props, ...)
 	return New
 end)
 
+-- ✅ Button with White Border (Monochrome style)
 AddEle("Button", function(parent, props, ...)
 	local args = {...}
 	local New = InsertTheme(SetProps(Create("TextButton", parent, {
@@ -1240,11 +1238,24 @@ AddEle("Button", function(parent, props, ...)
 		AutoButtonColor = false
 	}), props), "Frame")
 	
+	-- White clear border
+	local BorderStroke = Create("UIStroke", New, {
+		Color = Color3.fromRGB(210, 210, 210),
+		Thickness = 1,
+		Transparency = 0.45,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Name = "MonochromeBorder"
+	})
+	
 	New.MouseEnter:Connect(function()
 		New.BackgroundTransparency = 0.4
+		BorderStroke.Transparency = 0.05
+		BorderStroke.Thickness = 1.5
 	end)
 	New.MouseLeave:Connect(function()
 		New.BackgroundTransparency = 0
+		BorderStroke.Transparency = 0.45
+		BorderStroke.Thickness = 1
 	end)
 	if args[1] then
 		New.Activated:Connect(args[1])
@@ -1356,7 +1367,6 @@ local function GetColor(Instance)
 	return ""
 end
 
--- /////////// --
 function redzlib:GetIcon(index)
 	if type(index) ~= "string" or index:find("rbxassetid://") or #index == 0 then
 		return index
@@ -1387,7 +1397,7 @@ function redzlib:SetTheme(NewTheme)
 	SaveJson("redz library V5.json", redzlib.Save)
 	Theme = redzlib.Themes[NewTheme]
 	
-	Comnection:FireConnection("ThemeChanged", NewTheme)
+	Connection:FireConnection("ThemeChanged", NewTheme)
 	table.foreach(redzlib.Instances, function(_,Val)
 		if Val.Type == "Gradient" then
 			Val.Instance.Color = Theme["Color Hub 1"]
@@ -1538,9 +1548,10 @@ function redzlib:MakeWindow(Configs)
 		Name = "Control Tab Size"
 	}))
 	
+	-- ✅ Shorter UI clamps
 	local function ControlSize()
 		local Pos1, Pos2 = ControlSize1.Position, ControlSize2.Position
-		ControlSize1.Position = UDim2.fromOffset(math.clamp(Pos1.X.Offset, 430, 1000), math.clamp(Pos1.Y.Offset, 200, 500))
+		ControlSize1.Position = UDim2.fromOffset(math.clamp(Pos1.X.Offset, 380, 1000), math.clamp(Pos1.Y.Offset, 160, 400))
 		ControlSize2.Position = UDim2.new(0, math.clamp(Pos2.X.Offset, 135, 250), 1, 0)
 		
 		MainScroll.Size = UDim2.new(0, ControlSize2.Position.X.Offset, 1, -TopBar.Size.Y.Offset)
@@ -1749,7 +1760,7 @@ function redzlib:MakeWindow(Configs)
 			
 			for _,Button in pairs(ButtonsHolder:GetChildren()) do
 				if Button:IsA("TextButton") then
-					Button.Size = UDim2.new(1 / ButtonCount, -(((ButtonCount - 1) * 20) / ButtonCount), 0, 32) -- Fluent Library :)
+					Button.Size = UDim2.new(1 / ButtonCount, -(((ButtonCount - 1) * 20) / ButtonCount), 0, 32)
 				end
 			end
 			Button.Activated:Connect(Dialog.Close)
