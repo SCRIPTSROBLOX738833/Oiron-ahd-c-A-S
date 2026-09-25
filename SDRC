@@ -1,6 +1,6 @@
 -- ==========================================
--- redzlib Library — CCRAFT SPACE Edition
--- Design matches official CCRAFT SPACE UI
+-- redzlib Library — CCRAFT SPACE Mobile
+-- Responsive for phones & tablets
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -10,20 +10,21 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 local redzlib = { Version = "1.0.0", Flags = {} }
 
--- ============ ASSET IDS (بتاعتك) ============
+-- ============ ASSET IDS ============
 local ASSETS = {
-    Logo       = "rbxassetid://106741216669154",  -- الدائرة الصغيرة
-    Background = "rbxassetid://86260704380228",   -- الخلفية
+    Logo       = "rbxassetid://106741216669154",
+    Background = "rbxassetid://86260704380228",
 }
 
--- ============ COLOR PALETTE ============
+-- ============ COLORS ============
 local C = {
-    Black     = Color3.fromRGB(0, 0, 0),
-    White     = Color3.fromRGB(255, 255, 255),
-    DimText   = Color3.fromRGB(165, 165, 165),
+    Black   = Color3.fromRGB(0, 0, 0),
+    White   = Color3.fromRGB(255, 255, 255),
+    DimText = Color3.fromRGB(165, 165, 165),
 }
 
 -- ============ ICONS ============
@@ -43,6 +44,10 @@ local Icons = {
     minus    = "rbxassetid://10734896206",
 }
 redzlib.Icons = Icons
+
+-- ============ BASE SIZE (mobile) ============
+local BASE_W = 460   -- عرض النافذة الأساسي
+local BASE_H = 280   -- طول النافذة الأساسي
 
 -- ============ HELPERS ============
 local function Create(class, props, children)
@@ -127,8 +132,28 @@ local ScreenGui = Create("ScreenGui", {
 })
 local UIScale = Create("UIScale", { Name = "Scale", Scale = 1, Parent = ScreenGui })
 
+-- ============ AUTO RESPONSIVE SCALE ============
+local function updateScale()
+    local vp = Camera.ViewportSize
+    -- الحجم المناسب حسب أصغر بُعد في الشاشة
+    -- نحسب على أساس الطول (لأن الموبايل بالعرض)
+    local targetW = vp.X * 0.85
+    local targetH = vp.Y * 0.85
+    local scaleW = targetW / BASE_W
+    local scaleH = targetH / BASE_H
+    local scale = math.min(scaleW, scaleH)
+    -- نحدد الحد الأدنى والأقصى
+    scale = math.clamp(scale, 0.65, 1.4)
+    UIScale.Scale = scale
+end
+updateScale()
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+
 function redzlib:SetScale(value)
-    UIScale.Scale = 350 / (value or 350)
+    -- Manual override
+    UIScale.Scale = value or 1
+    -- نوقف الأوتو
+    Camera:GetPropertyChangedSignal("ViewportSize"):Disconnect()
 end
 
 -- ============ NOTIFY ============
@@ -143,20 +168,20 @@ function redzlib:MakeNotify(a, b)
     if not notifyHolder or not notifyHolder.Parent then
         notifyHolder = Create("Frame", {
             Name = "NotifyHolder",
-            Size = UDim2.new(0, 320, 1, -40),
-            Position = UDim2.new(1, -340, 0, 20),
+            Size = UDim2.new(0, 300, 1, -30),
+            Position = UDim2.new(1, -320, 0, 15),
             BackgroundTransparency = 1,
             Parent = ScreenGui
         })
         Create("UIListLayout", {
-            Padding = UDim.new(0, 8),
+            Padding = UDim.new(0, 6),
             SortOrder = Enum.SortOrder.LayoutOrder,
             Parent = notifyHolder
         })
     end
 
     local notify = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 64),
+        Size = UDim2.new(1, 0, 0, 58),
         BackgroundColor3 = C.Black,
         LayoutOrder = math.floor(tick() * 1000) % 1000000,
         Parent = notifyHolder
@@ -164,28 +189,26 @@ function redzlib:MakeNotify(a, b)
     Corner(notify, UDim.new(0, 8))
     Stroke(notify, C.White, 1.2)
 
-    local bar = Create("Frame", {
+    Create("Frame", {
         Size = UDim2.new(0, 3, 0.7, 0),
         Position = UDim2.new(0, 0, 0.15, 0),
         BackgroundColor3 = C.White,
         Parent = notify
     })
-    Corner(bar, UDim.new(1, 0))
-
     Create("TextLabel", {
-        Size = UDim2.new(1, -24, 0, 20),
+        Size = UDim2.new(1, -24, 0, 18),
         Position = UDim2.new(0, 14, 0, 8),
         BackgroundTransparency = 1, Text = title,
-        Font = Enum.Font.GothamBold, TextSize = 14,
+        Font = Enum.Font.GothamBold, TextSize = 13,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = notify
     })
     Create("TextLabel", {
-        Size = UDim2.new(1, -24, 0, 30),
-        Position = UDim2.new(0, 14, 0, 30),
+        Size = UDim2.new(1, -24, 0, 26),
+        Position = UDim2.new(0, 14, 0, 28),
         BackgroundTransparency = 1, Text = content,
-        Font = Enum.Font.Gotham, TextSize = 11,
+        Font = Enum.Font.Gotham, TextSize = 10,
         TextColor3 = C.DimText,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped = true,
@@ -236,9 +259,7 @@ function Window:Save()
     local data = {}
     for k, v in pairs(self.Flags) do data[k] = v end
     local ok, encoded = pcall(function() return HttpService:JSONEncode(data) end)
-    if ok and writefile then
-        pcall(writefile, self.SaveFolder, encoded)
-    end
+    if ok and writefile then pcall(writefile, self.SaveFolder, encoded) end
 end
 
 function Window:Load()
@@ -253,12 +274,12 @@ end
 function Window:AddMinimizeButton(opts)
     opts = opts or {}
     local btn = Create("ImageButton", {
-        Size = UDim2.new(0, 15, 0, 15),
-        Position = UDim2.new(1, -55, 0.5, -7.5),
+        Size = UDim2.new(0, 14, 0, 14),
+        Position = UDim2.new(1, -50, 0.5, -7),
         BackgroundTransparency = 1,
         Image = (opts.Button and opts.Button.Image) or Icons.minus,
         ImageColor3 = C.White,
-        ZIndex = 2,
+        ZIndex = 3,
         Parent = self.TopBar
     })
     local minimized = false
@@ -266,10 +287,10 @@ function Window:AddMinimizeButton(opts)
         minimized = not minimized
         if minimized then
             self.Body.Visible = false
-            Tween(self.Main, { Size = UDim2.fromOffset(650, 52) }, 0.25)
+            Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, 44) }, 0.25)
         else
             self.Body.Visible = true
-            Tween(self.Main, { Size = UDim2.fromOffset(650, 400) }, 0.25)
+            Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, BASE_H) }, 0.25)
         end
     end)
 end
@@ -286,30 +307,30 @@ function Window:MakeTab(opts)
 
     local btn = Create("TextButton", {
         Name = name,
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 28),
         BackgroundColor3 = C.Black,
         Text = "",
         AutoButtonColor = false,
         Parent = self.Sidebar
     })
-    Corner(btn, UDim.new(0, 8))
-    local stroke = Stroke(btn, C.White, 1.2)
+    Corner(btn, UDim.new(0, 7))
+    local stroke = Stroke(btn, C.White, 1)
 
     local iconImg = Create("ImageLabel", {
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(0, 15, 0.5, -8),
+        Size = UDim2.new(0, 14, 0, 14),
+        Position = UDim2.new(0, 11, 0.5, -7),
         BackgroundTransparency = 1,
         Image = icon,
         ImageColor3 = C.White,
         Parent = btn
     })
     local label = Create("TextLabel", {
-        Size = UDim2.new(1, -40, 1, 0),
-        Position = UDim2.new(0, 40, 0, 0),
+        Size = UDim2.new(1, -36, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamMedium,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = btn
@@ -327,17 +348,17 @@ function Window:MakeTab(opts)
         Parent = self.Content
     })
     local layout = Create("UIListLayout", {
-        Padding = UDim.new(0, 10),
+        Padding = UDim.new(0, 7),
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = page
     })
     Create("UIPadding", {
-        PaddingRight = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 20),
+        PaddingRight = UDim.new(0, 6),
+        PaddingBottom = UDim.new(0, 14),
         Parent = page
     })
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 14)
     end)
 
     local tab = setmetatable({
@@ -367,7 +388,7 @@ function Tab:AddSection(opts)
     opts = opts or {}
     local name = opts[1] or opts.Name or "Section"
     local frame = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 26),
+        Size = UDim2.new(1, 0, 0, 22),
         BackgroundTransparency = 1,
         LayoutOrder = self:_nextOrder(),
         Parent = self.Page
@@ -377,14 +398,14 @@ function Tab:AddSection(opts)
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
     })
     Create("Frame", {
         Size = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 1, -4),
+        Position = UDim2.new(0, 0, 1, -3),
         BackgroundColor3 = C.White,
         BackgroundTransparency = 0.7,
         Parent = frame
@@ -396,28 +417,28 @@ function Tab:AddParagraph(opts)
     local title = opts[1] or opts.Title or ""
     local desc  = opts[2] or opts.Desc or ""
     local frame = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 52),
+        Size = UDim2.new(1, 0, 0, 42),
         BackgroundColor3 = C.Black,
         LayoutOrder = self:_nextOrder(),
         Parent = self.Page
     })
-    Corner(frame, UDim.new(0, 8))
-    Stroke(frame, C.White, 1.2)
+    Corner(frame, UDim.new(0, 7))
+    Stroke(frame, C.White, 1)
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -24, 0, 22),
-        Position = UDim2.new(0, 14, 0, 6),
+        Size = UDim2.new(1, -20, 0, 18),
+        Position = UDim2.new(0, 12, 0, 5),
         BackgroundTransparency = 1, Text = title,
-        Font = Enum.Font.GothamBold, TextSize = 13,
+        Font = Enum.Font.GothamBold, TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
     })
     Create("TextLabel", {
-        Size = UDim2.new(1, -24, 0, 18),
-        Position = UDim2.new(0, 14, 0, 28),
+        Size = UDim2.new(1, -20, 0, 14),
+        Position = UDim2.new(0, 12, 0, 23),
         BackgroundTransparency = 1, Text = desc,
-        Font = Enum.Font.Gotham, TextSize = 11,
+        Font = Enum.Font.Gotham, TextSize = 10,
         TextColor3 = C.DimText,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
@@ -425,7 +446,7 @@ function Tab:AddParagraph(opts)
 end
 
 -- ==========================================
--- BUTTON (زر حقيقي بـ ▶)
+-- BUTTON
 -- ==========================================
 function Tab:AddButton(opts)
     opts = opts or {}
@@ -434,20 +455,20 @@ function Tab:AddButton(opts)
     local icon     = opts.Icon or nil
 
     local btn = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 38),
+        Size = UDim2.new(1, 0, 0, 32),
         BackgroundColor3 = C.Black,
         Text = "",
         AutoButtonColor = false,
         LayoutOrder = self:_nextOrder(),
         Parent = self.Page
     })
-    Corner(btn, UDim.new(0, 8))
-    local st = Stroke(btn, C.White, 1.2)
+    Corner(btn, UDim.new(0, 7))
+    local st = Stroke(btn, C.White, 1)
 
     if icon then
         Create("ImageLabel", {
-            Size = UDim2.new(0, 16, 0, 16),
-            Position = UDim2.new(0, 14, 0.5, -8),
+            Size = UDim2.new(0, 14, 0, 14),
+            Position = UDim2.new(0, 11, 0.5, -7),
             BackgroundTransparency = 1,
             Image = icon,
             ImageColor3 = C.White,
@@ -456,28 +477,28 @@ function Tab:AddButton(opts)
     end
 
     local labelLbl = Create("TextLabel", {
-        Size = UDim2.new(1, -80, 1, 0),
-        Position = UDim2.new(0, icon and 40 or 16, 0, 0),
+        Size = UDim2.new(1, -70, 1, 0),
+        Position = UDim2.new(0, icon and 32 or 14, 0, 0),
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = btn
     })
 
     local arrowBg = Create("Frame", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -34, 0.5, -13),
+        Size = UDim2.new(0, 22, 0, 22),
+        Position = UDim2.new(1, -28, 0.5, -11),
         BackgroundColor3 = C.Black,
         Parent = btn
     })
     Corner(arrowBg, UDim.new(1, 0))
-    local arrowSt = Stroke(arrowBg, C.White, 1.2)
+    local arrowSt = Stroke(arrowBg, C.White, 1)
 
     local arrowIcon = Create("ImageLabel", {
-        Size = UDim2.new(0, 11, 0, 11),
+        Size = UDim2.new(0, 9, 0, 9),
         Position = UDim2.new(0.5, 1, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
@@ -531,7 +552,7 @@ function Tab:AddToggle(opts)
     local saved    = window.Flags[name]
     local state    = (saved ~= nil) and saved or default
 
-    local height = (desc ~= "") and 58 or 42
+    local height = (desc ~= "") and 46 or 34
     local frame = Create("TextButton", {
         Size = UDim2.new(1, 0, 0, height),
         BackgroundColor3 = C.Black,
@@ -540,13 +561,13 @@ function Tab:AddToggle(opts)
         LayoutOrder = self:_nextOrder(),
         Parent = self.Page
     })
-    Corner(frame, UDim.new(0, 8))
-    Stroke(frame, C.White, 1.2)
+    Corner(frame, UDim.new(0, 7))
+    Stroke(frame, C.White, 1)
 
     if icon then
         Create("ImageLabel", {
-            Size = UDim2.new(0, 16, 0, 16),
-            Position = UDim2.new(0, 14, 0.5, -8),
+            Size = UDim2.new(0, 14, 0, 14),
+            Position = UDim2.new(0, 11, 0.5, -7),
             BackgroundTransparency = 1,
             Image = icon,
             ImageColor3 = C.White,
@@ -555,24 +576,24 @@ function Tab:AddToggle(opts)
     end
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -80, 0, 18),
-        Position = UDim2.new(0, icon and 40 or 16, 0, (desc ~= "" and 8) or (height/2 - 9)),
+        Size = UDim2.new(1, -70, 0, 16),
+        Position = UDim2.new(0, icon and 32 or 14, 0, (desc ~= "" and 6) or (height/2 - 8)),
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
     })
     if desc ~= "" then
         Create("TextLabel", {
-            Size = UDim2.new(1, -80, 0, 16),
-            Position = UDim2.new(0, icon and 40 or 16, 0, 26),
+            Size = UDim2.new(1, -70, 0, 14),
+            Position = UDim2.new(0, icon and 32 or 14, 0, 22),
             BackgroundTransparency = 1,
             Text = desc,
             Font = Enum.Font.Gotham,
-            TextSize = 10,
+            TextSize = 9,
             TextColor3 = C.DimText,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = frame
@@ -580,30 +601,30 @@ function Tab:AddToggle(opts)
     end
 
     local switchBg = Create("Frame", {
-        Size = UDim2.new(0, 34, 0, 18),
-        Position = UDim2.new(1, -46, 0.5, -9),
+        Size = UDim2.new(0, 30, 0, 16),
+        Position = UDim2.new(1, -40, 0.5, -8),
         BackgroundColor3 = C.Black,
         Parent = frame
     })
     Corner(switchBg, UDim.new(1, 0))
-    Stroke(switchBg, C.White, 1.2)
+    Stroke(switchBg, C.White, 1)
 
     local knob = Create("Frame", {
-        Size = UDim2.new(0, 12, 0, 12),
-        Position = state and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
+        Size = UDim2.new(0, 10, 0, 10),
+        Position = state and UDim2.new(1, -13, 0.5, -5) or UDim2.new(0, 3, 0.5, -5),
         BackgroundColor3 = C.White,
         BackgroundTransparency = state and 0 or 1,
         Parent = switchBg
     })
     Corner(knob, UDim.new(1, 0))
-    Stroke(knob, C.White, 1.2)
+    Stroke(knob, C.White, 1)
 
     local function updateVis(animate)
         local t = animate and 0.2 or 0.001
         if state then
-            Tween(knob, { Position = UDim2.new(1, -15, 0.5, -6), BackgroundTransparency = 0 }, t)
+            Tween(knob, { Position = UDim2.new(1, -13, 0.5, -5), BackgroundTransparency = 0 }, t)
         else
-            Tween(knob, { Position = UDim2.new(0, 3, 0.5, -6), BackgroundTransparency = 1 }, t)
+            Tween(knob, { Position = UDim2.new(0, 3, 0.5, -5), BackgroundTransparency = 1 }, t)
         end
     end
     updateVis(false)
@@ -635,20 +656,20 @@ function Tab:AddSlider(opts)
     local saved    = window.Flags[name]
     local value    = math.clamp((saved ~= nil) and saved or default, min, max)
 
-    local height = (desc ~= "") and 74 or 60
+    local height = (desc ~= "") and 60 or 48
     local frame = Create("Frame", {
         Size = UDim2.new(1, 0, 0, height),
         BackgroundColor3 = C.Black,
         LayoutOrder = self:_nextOrder(),
         Parent = self.Page
     })
-    Corner(frame, UDim.new(0, 8))
-    Stroke(frame, C.White, 1.2)
+    Corner(frame, UDim.new(0, 7))
+    Stroke(frame, C.White, 1)
 
     if icon then
         Create("ImageLabel", {
-            Size = UDim2.new(0, 16, 0, 16),
-            Position = UDim2.new(0, 14, 0, 10),
+            Size = UDim2.new(0, 14, 0, 14),
+            Position = UDim2.new(0, 11, 0, 8),
             BackgroundTransparency = 1,
             Image = icon,
             ImageColor3 = C.White,
@@ -657,58 +678,58 @@ function Tab:AddSlider(opts)
     end
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -100, 0, 18),
-        Position = UDim2.new(0, icon and 40 or 16, 0, 8),
+        Size = UDim2.new(1, -80, 0, 16),
+        Position = UDim2.new(0, icon and 32 or 14, 0, 7),
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
     })
 
     local valueBox = Create("Frame", {
-        Size = UDim2.new(0, 55, 0, 22),
-        Position = UDim2.new(1, -68, 0, 8),
+        Size = UDim2.new(0, 48, 0, 20),
+        Position = UDim2.new(1, -58, 0, 6),
         BackgroundColor3 = C.Black,
         Parent = frame
     })
     Corner(valueBox, UDim.new(0, 6))
-    Stroke(valueBox, C.White, 1.2)
+    Stroke(valueBox, C.White, 1)
     local valueLbl = Create("TextLabel", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text = tostring(value),
         Font = Enum.Font.GothamBold,
-        TextSize = 12,
+        TextSize = 10,
         TextColor3 = C.White,
         Parent = valueBox
     })
 
     if desc ~= "" then
         Create("TextLabel", {
-            Size = UDim2.new(1, -24, 0, 14),
-            Position = UDim2.new(0, icon and 40 or 16, 0, 28),
+            Size = UDim2.new(1, -20, 0, 12),
+            Position = UDim2.new(0, icon and 32 or 14, 0, 23),
             BackgroundTransparency = 1,
             Text = desc,
             Font = Enum.Font.Gotham,
-            TextSize = 10,
+            TextSize = 9,
             TextColor3 = C.DimText,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = frame
         })
     end
 
-    local barY = (desc ~= "") and 54 or 42
+    local barY = (desc ~= "") and 44 or 34
     local sliderBg = Create("Frame", {
-        Size = UDim2.new(1, -32, 0, 5),
-        Position = UDim2.new(0, 16, 0, barY),
+        Size = UDim2.new(1, -28, 0, 4),
+        Position = UDim2.new(0, 14, 0, barY),
         BackgroundColor3 = C.Black,
         Parent = frame
     })
     Corner(sliderBg, UDim.new(1, 0))
-    Stroke(sliderBg, C.White, 1.2)
+    Stroke(sliderBg, C.White, 1)
 
     local alpha = (value - min) / (max - min)
     local fill = Create("Frame", {
@@ -719,14 +740,14 @@ function Tab:AddSlider(opts)
     Corner(fill, UDim.new(1, 0))
 
     local knob = Create("Frame", {
-        Size = UDim2.new(0, 14, 0, 14),
+        Size = UDim2.new(0, 12, 0, 12),
         Position = UDim2.new(alpha, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = C.White,
         Parent = sliderBg
     })
     Corner(knob, UDim.new(1, 0))
-    Stroke(knob, C.Black, 1.5)
+    Stroke(knob, C.Black, 1.2)
 
     local dragging = false
     local function updateValue(input)
@@ -785,30 +806,30 @@ function Tab:AddInput(opts)
     local name         = opts.Name or "Input"
     local desc         = opts.Description or ""
     local default      = opts.Default or ""
-    local placeholder  = opts.Placeholder or "Type here..."
+    local placeholder  = opts.Placeholder or "Type..."
     local callback     = opts.Callback or function() end
     local clearOnEnter = opts.ClearOnEnter or false
     local window       = self.Window
     local saved        = window.Flags[name]
     local initial      = (saved ~= nil) and saved or default
 
-    local height = (desc ~= "") and 68 or 56
+    local height = (desc ~= "") and 54 or 44
     local frame = Create("Frame", {
         Size = UDim2.new(1, 0, 0, height),
         BackgroundColor3 = C.Black,
         LayoutOrder = self:_nextOrder(),
         Parent = self.Page
     })
-    Corner(frame, UDim.new(0, 8))
-    Stroke(frame, C.White, 1.2)
+    Corner(frame, UDim.new(0, 7))
+    Stroke(frame, C.White, 1)
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -24, 0, 18),
-        Position = UDim2.new(0, 16, 0, 8),
+        Size = UDim2.new(1, -20, 0, 16),
+        Position = UDim2.new(0, 14, 0, 6),
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
@@ -816,37 +837,37 @@ function Tab:AddInput(opts)
 
     if desc ~= "" then
         Create("TextLabel", {
-            Size = UDim2.new(1, -24, 0, 14),
-            Position = UDim2.new(0, 16, 0, 26),
+            Size = UDim2.new(1, -20, 0, 12),
+            Position = UDim2.new(0, 14, 0, 22),
             BackgroundTransparency = 1,
             Text = desc,
             Font = Enum.Font.Gotham,
-            TextSize = 10,
+            TextSize = 9,
             TextColor3 = C.DimText,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = frame
         })
     end
 
-    local inputY = (desc ~= "") and 46 or 32
+    local inputY = (desc ~= "") and 36 or 26
     local inputBox = Create("Frame", {
-        Size = UDim2.new(1, -32, 0, height - inputY - 8),
-        Position = UDim2.new(0, 16, 0, inputY),
+        Size = UDim2.new(1, -28, 0, height - inputY - 6),
+        Position = UDim2.new(0, 14, 0, inputY),
         BackgroundColor3 = C.Black,
         Parent = frame
     })
     Corner(inputBox, UDim.new(0, 6))
-    local inputSt = Stroke(inputBox, C.White, 1.2)
+    local inputSt = Stroke(inputBox, C.White, 1)
 
     local textBox = Create("TextBox", {
-        Size = UDim2.new(1, -20, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(1, -18, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
         BackgroundTransparency = 1,
         Text = initial,
         PlaceholderText = placeholder,
         PlaceholderColor3 = C.DimText,
         Font = Enum.Font.Gotham,
-        TextSize = 12,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         ClearTextOnFocus = false,
@@ -854,15 +875,13 @@ function Tab:AddInput(opts)
     })
 
     textBox.Focused:Connect(function()
-        Tween(inputSt, { Thickness = 1.8 }, 0.15)
+        Tween(inputSt, { Thickness = 1.6 }, 0.15)
     end)
     textBox.FocusLost:Connect(function(enterPressed)
-        Tween(inputSt, { Thickness = 1.2 }, 0.15)
+        Tween(inputSt, { Thickness = 1 }, 0.15)
         window.Flags[name] = textBox.Text
         task.spawn(function() pcall(callback, textBox.Text, enterPressed) end)
-        if clearOnEnter and enterPressed then
-            textBox.Text = ""
-        end
+        if clearOnEnter and enterPressed then textBox.Text = "" end
         window:Save()
     end)
 
@@ -883,7 +902,7 @@ function Tab:AddDropdown(opts)
     local current  = (saved ~= nil) and saved or default
 
     local container = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 38),
+        Size = UDim2.new(1, 0, 0, 32),
         BackgroundTransparency = 1,
         ClipsDescendants = false,
         LayoutOrder = self:_nextOrder(),
@@ -891,33 +910,33 @@ function Tab:AddDropdown(opts)
     })
 
     local frame = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 38),
+        Size = UDim2.new(1, 0, 0, 32),
         BackgroundColor3 = C.Black,
         Text = "",
         AutoButtonColor = false,
         Parent = container
     })
-    Corner(frame, UDim.new(0, 8))
-    Stroke(frame, C.White, 1.2)
+    Corner(frame, UDim.new(0, 7))
+    Stroke(frame, C.White, 1)
 
     Create("TextLabel", {
-        Size = UDim2.new(1, -140, 1, 0),
-        Position = UDim2.new(0, 16, 0, 0),
+        Size = UDim2.new(1, -120, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
         BackgroundTransparency = 1,
         Text = name,
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = frame
     })
     local currentLbl = Create("TextLabel", {
-        Size = UDim2.new(0, 100, 1, 0),
-        Position = UDim2.new(1, -120, 0, 0),
+        Size = UDim2.new(0, 90, 1, 0),
+        Position = UDim2.new(1, -105, 0, 0),
         BackgroundTransparency = 1,
         Text = tostring(current or "Select"),
         Font = Enum.Font.Gotham,
-        TextSize = 12,
+        TextSize = 10,
         TextColor3 = C.DimText,
         TextXAlignment = Enum.TextXAlignment.Right,
         Parent = frame
@@ -925,25 +944,25 @@ function Tab:AddDropdown(opts)
 
     local listHolder = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(0, 0, 0, 42),
+        Position = UDim2.new(0, 0, 0, 36),
         BackgroundColor3 = C.Black,
         Visible = false,
         ClipsDescendants = true,
         ZIndex = 5,
         Parent = container
     })
-    Corner(listHolder, UDim.new(0, 8))
-    Stroke(listHolder, C.White, 1.2)
+    Corner(listHolder, UDim.new(0, 7))
+    Stroke(listHolder, C.White, 1)
     Create("UIListLayout", {
-        Padding = UDim.new(0, 4),
+        Padding = UDim.new(0, 3),
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = listHolder
     })
     Create("UIPadding", {
-        PaddingTop = UDim.new(0, 6),
-        PaddingBottom = UDim.new(0, 6),
-        PaddingLeft = UDim.new(0, 6),
-        PaddingRight = UDim.new(0, 6),
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5),
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5),
         Parent = listHolder
     })
 
@@ -955,17 +974,17 @@ function Tab:AddDropdown(opts)
         end
         for i, option in ipairs(opts2) do
             local optBtn = Create("TextButton", {
-                Size = UDim2.new(1, 0, 0, 28),
+                Size = UDim2.new(1, 0, 0, 24),
                 BackgroundColor3 = C.Black,
                 Text = tostring(option),
                 Font = Enum.Font.Gotham,
-                TextSize = 12,
+                TextSize = 10,
                 TextColor3 = C.White,
                 AutoButtonColor = false,
                 LayoutOrder = i,
                 Parent = listHolder
             })
-            Corner(optBtn, UDim.new(0, 6))
+            Corner(optBtn, UDim.new(0, 5))
             Stroke(optBtn, C.White, 1).Transparency = 0.7
             optBtn.MouseEnter:Connect(function()
                 Tween(optBtn, { BackgroundColor3 = C.White }, 0.1)
@@ -982,7 +1001,7 @@ function Tab:AddDropdown(opts)
                 task.spawn(function() pcall(callback, current) end)
                 isOpen = false
                 Tween(listHolder, { Size = UDim2.new(1, 0, 0, 0) }, 0.15)
-                Tween(container, { Size = UDim2.new(1, 0, 0, 38) }, 0.15)
+                Tween(container, { Size = UDim2.new(1, 0, 0, 32) }, 0.15)
                 task.delay(0.15, function()
                     if not isOpen then listHolder.Visible = false end
                 end)
@@ -996,12 +1015,12 @@ function Tab:AddDropdown(opts)
         isOpen = not isOpen
         if isOpen then
             listHolder.Visible = true
-            local targetH = math.min(#options * 32 + 14, 160)
+            local targetH = math.min(#options * 27 + 12, 130)
             Tween(listHolder, { Size = UDim2.new(1, 0, 0, targetH) }, 0.18)
-            Tween(container, { Size = UDim2.new(1, 0, 0, 42 + targetH) }, 0.18)
+            Tween(container, { Size = UDim2.new(1, 0, 0, 36 + targetH) }, 0.18)
         else
             Tween(listHolder, { Size = UDim2.new(1, 0, 0, 0) }, 0.15)
-            Tween(container, { Size = UDim2.new(1, 0, 0, 38) }, 0.15)
+            Tween(container, { Size = UDim2.new(1, 0, 0, 32) }, 0.15)
             task.delay(0.15, function()
                 if not isOpen then listHolder.Visible = false end
             end)
@@ -1034,57 +1053,54 @@ function redzlib:MakeWindow(opts)
         Title = title, SubTitle = subtitle,
     }, Window)
 
-    -- Main window
     local main = Create("Frame", {
         Name = "Main",
-        Size = UDim2.fromOffset(650, 400),
-        Position = UDim2.new(0.5, -325, 0.5, -200),
+        Size = UDim2.fromOffset(BASE_W, BASE_H),
+        Position = UDim2.new(0.5, -BASE_W/2, 0.5, -BASE_H/2),
         BackgroundColor3 = C.Black,
         Parent = ScreenGui
     })
-    Corner(main, UDim.new(0, 12))
+    Corner(main, UDim.new(0, 10))
     Stroke(main, C.White, 1.5)
     self.Main = main
 
-    -- ============ BACKGROUND IMAGE ============
+    -- Background
     local bgImage = Create("ImageLabel", {
         Name = "BackgroundImage",
         Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
         BackgroundTransparency = 1,
         Image = ASSETS.Background,
         ImageColor3 = C.White,
-        ImageTransparency = 0.35,
+        ImageTransparency = 0.4,
         ScaleType = Enum.ScaleType.Crop,
         ZIndex = 0,
         Parent = main
     })
-    Corner(bgImage, UDim.new(0, 12))
+    Corner(bgImage, UDim.new(0, 10))
 
-    -- Dark overlay for readability
     local overlay = Create("Frame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = C.Black,
-        BackgroundTransparency = 0.15,
+        BackgroundTransparency = 0.2,
         ZIndex = 1,
         Parent = main
     })
-    Corner(overlay, UDim.new(0, 12))
+    Corner(overlay, UDim.new(0, 10))
 
-    -- ============ TOP BAR ============
+    -- Top bar
     local topbar = Create("Frame", {
         Name = "TopBar",
-        Size = UDim2.new(1, 0, 0, 50),
+        Size = UDim2.new(1, 0, 0, 40),
         BackgroundTransparency = 1,
         ZIndex = 3,
         Parent = main
     })
     self.TopBar = topbar
 
-    -- Logo (الدائرة الصغيرة)
+    -- Logo
     Create("ImageLabel", {
-        Size = UDim2.new(0, 34, 0, 34),
-        Position = UDim2.new(0, 16, 0.5, -17),
+        Size = UDim2.new(0, 26, 0, 26),
+        Position = UDim2.new(0, 12, 0.5, -13),
         BackgroundTransparency = 1,
         Image = ASSETS.Logo,
         ImageColor3 = C.White,
@@ -1092,61 +1108,56 @@ function redzlib:MakeWindow(opts)
         Parent = topbar
     })
 
-    -- "CCRAFT" big
     Create("TextLabel", {
-        Size = UDim2.new(0, 160, 0, 22),
-        Position = UDim2.new(0, 58, 0, 6),
+        Size = UDim2.new(0, 130, 0, 18),
+        Position = UDim2.new(0, 44, 0, 4),
         BackgroundTransparency = 1,
         Text = "CCRAFT",
         Font = Enum.Font.GothamBlack,
-        TextSize = 20,
+        TextSize = 15,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 3,
         Parent = topbar
     })
-    -- "S P A C E"
     Create("TextLabel", {
-        Size = UDim2.new(0, 160, 0, 14),
-        Position = UDim2.new(0, 58, 0, 26),
+        Size = UDim2.new(0, 130, 0, 12),
+        Position = UDim2.new(0, 44, 0, 20),
         BackgroundTransparency = 1,
         Text = "S  P  A  C  E",
         Font = Enum.Font.GothamBold,
-        TextSize = 10,
+        TextSize = 8,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 3,
         Parent = topbar
     })
 
-    -- Separator
     Create("Frame", {
-        Size = UDim2.new(0, 1, 0, 24),
-        Position = UDim2.new(0, 205, 0.5, -12),
+        Size = UDim2.new(0, 1, 0, 20),
+        Position = UDim2.new(0, 155, 0.5, -10),
         BackgroundColor3 = C.White,
         BackgroundTransparency = 0.4,
         ZIndex = 3,
         Parent = topbar
     })
 
-    -- Subtitle
     Create("TextLabel", {
-        Size = UDim2.new(0, 250, 1, 0),
-        Position = UDim2.new(0, 225, 0, 0),
+        Size = UDim2.new(0, 200, 1, 0),
+        Position = UDim2.new(0, 168, 0, 0),
         BackgroundTransparency = 1,
         Text = subtitle ~= "" and subtitle or "Roblox Script Hub",
         Font = Enum.Font.GothamBold,
-        TextSize = 14,
+        TextSize = 11,
         TextColor3 = C.White,
         TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 3,
         Parent = topbar
     })
 
-    -- Close
     local closeBtn = Create("ImageButton", {
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(1, -30, 0.5, -8),
+        Size = UDim2.new(0, 14, 0, 14),
+        Position = UDim2.new(1, -25, 0.5, -7),
         BackgroundTransparency = 1,
         Image = Icons.close,
         ImageColor3 = C.White,
@@ -1157,22 +1168,21 @@ function redzlib:MakeWindow(opts)
 
     MakeDrag(main, topbar)
 
-    -- Body
     local body = Create("Frame", {
         Name = "Body",
-        Size = UDim2.new(1, 0, 1, -50),
-        Position = UDim2.new(0, 0, 0, 50),
+        Size = UDim2.new(1, 0, 1, -40),
+        Position = UDim2.new(0, 0, 0, 40),
         BackgroundTransparency = 1,
         ZIndex = 2,
         Parent = main
     })
     self.Body = body
 
-    -- Sidebar
+    -- Sidebar (مصغّرة للموبايل)
     local sidebar = Create("ScrollingFrame", {
         Name = "Sidebar",
-        Size = UDim2.new(0, 170, 1, -20),
-        Position = UDim2.new(0, 20, 0, 10),
+        Size = UDim2.new(0, 130, 1, -14),
+        Position = UDim2.new(0, 14, 0, 7),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ScrollBarThickness = 0,
@@ -1181,21 +1191,21 @@ function redzlib:MakeWindow(opts)
         Parent = body
     })
     Create("UIListLayout", {
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = sidebar
     })
     local sbLayout = sidebar:FindFirstChildOfClass("UIListLayout")
     sbLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        sidebar.CanvasSize = UDim2.new(0, 0, 0, sbLayout.AbsoluteContentSize.Y + 10)
+        sidebar.CanvasSize = UDim2.new(0, 0, 0, sbLayout.AbsoluteContentSize.Y + 8)
     end)
     self.Sidebar = sidebar
 
-    -- Content
+    -- Content (عريض شوي عن الأول)
     local content = Create("Frame", {
         Name = "Content",
-        Size = UDim2.new(1, -210, 1, -20),
-        Position = UDim2.new(0, 200, 0, 10),
+        Size = UDim2.new(1, -160, 1, -14),
+        Position = UDim2.new(0, 152, 0, 7),
         BackgroundTransparency = 1,
         ZIndex = 2,
         Parent = body
