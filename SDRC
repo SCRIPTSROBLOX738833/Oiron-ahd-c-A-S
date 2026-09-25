@@ -1,6 +1,6 @@
 -- ==========================================
 -- redzlib Library — CCRAFT SPACE Mobile
--- Responsive for phones & tablets
+-- X = minimize to floating logo button
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -45,9 +45,10 @@ local Icons = {
 }
 redzlib.Icons = Icons
 
--- ============ BASE SIZE (mobile) ============
-local BASE_W = 460   -- عرض النافذة الأساسي
-local BASE_H = 280   -- طول النافذة الأساسي
+-- ============ BASE SIZE ============
+local BASE_W = 460
+local BASE_H = 280
+local FLOAT_SIZE = 58  -- حجم المربع العائم (لا كبير ولا صغير)
 
 -- ============ HELPERS ============
 local function Create(class, props, children)
@@ -135,14 +136,11 @@ local UIScale = Create("UIScale", { Name = "Scale", Scale = 1, Parent = ScreenGu
 -- ============ AUTO RESPONSIVE SCALE ============
 local function updateScale()
     local vp = Camera.ViewportSize
-    -- الحجم المناسب حسب أصغر بُعد في الشاشة
-    -- نحسب على أساس الطول (لأن الموبايل بالعرض)
     local targetW = vp.X * 0.85
     local targetH = vp.Y * 0.85
     local scaleW = targetW / BASE_W
     local scaleH = targetH / BASE_H
     local scale = math.min(scaleW, scaleH)
-    -- نحدد الحد الأدنى والأقصى
     scale = math.clamp(scale, 0.65, 1.4)
     UIScale.Scale = scale
 end
@@ -150,10 +148,7 @@ updateScale()
 Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
 
 function redzlib:SetScale(value)
-    -- Manual override
     UIScale.Scale = value or 1
-    -- نوقف الأوتو
-    Camera:GetPropertyChangedSignal("ViewportSize"):Disconnect()
 end
 
 -- ============ NOTIFY ============
@@ -232,6 +227,79 @@ function redzlib:MakeNotify(a, b)
 end
 
 -- ==========================================
+-- FLOATING LOGO BUTTON (يظهر عند إغلاق النافذة)
+-- ==========================================
+local function createFloatingButton(parentScreen, onOpen)
+    local float = Create("ImageButton", {
+        Name = "FloatingLogo",
+        Size = UDim2.fromOffset(FLOAT_SIZE, FLOAT_SIZE),
+        Position = UDim2.new(0, 20, 0.5, -FLOAT_SIZE/2),
+        BackgroundColor3 = C.Black,
+        Image = ASSETS.Logo,
+        ImageColor3 = C.White,
+        AutoButtonColor = false,
+        Visible = false,
+        ZIndex = 50,
+        Parent = parentScreen
+    })
+    Corner(float, UDim.new(0, 14))
+    Stroke(float, C.White, 1.8)
+
+    -- Inner icon scaled (padding)
+    float.ImageRectSize = Vector2.new(0, 0)
+    local inner = Create("ImageLabel", {
+        Size = UDim2.new(1, -18, 1, -18),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Image = ASSETS.Logo,
+        ImageColor3 = C.White,
+        ZIndex = 51,
+        Parent = float
+    })
+    float.Image = ""  -- نخلي الصورة بس في الـ inner
+
+    MakeDrag(float)
+
+    -- Click vs drag detection
+    local pressPos, pressTime, wasDrag = nil, nil, false
+    float.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            pressPos = input.Position
+            pressTime = tick()
+            wasDrag = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if pressPos and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            if (input.Position - pressPos).Magnitude > 8 then
+                wasDrag = true
+            end
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if not pressPos then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            local dt = tick() - pressTime
+            if not wasDrag and dt < 0.5 then
+                -- Ping animation
+                Tween(float, { Size = UDim2.fromOffset(FLOAT_SIZE - 6, FLOAT_SIZE - 6) }, 0.08)
+                task.delay(0.1, function()
+                    Tween(float, { Size = UDim2.fromOffset(FLOAT_SIZE, FLOAT_SIZE) }, 0.12)
+                end)
+                onOpen()
+            end
+            pressPos = nil
+        end
+    end)
+
+    return float
+end
+
+-- ==========================================
 -- WINDOW
 -- ==========================================
 local Window = {}
@@ -287,7 +355,7 @@ function Window:AddMinimizeButton(opts)
         minimized = not minimized
         if minimized then
             self.Body.Visible = false
-            Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, 44) }, 0.25)
+            Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, 40) }, 0.25)
         else
             self.Body.Visible = true
             Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, BASE_H) }, 0.25)
@@ -297,6 +365,39 @@ end
 
 function Window:Destroy()
     if self.Main then pcall(function() self.Main:Destroy() end) end
+    if self.FloatBtn then pcall(function() self.FloatBtn:Destroy() end) end
+end
+
+function Window:MinimizeToFloat()
+    -- اخفاء النافذة + اظهار المربع العائم
+    Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, BASE_H * 0.6) }, 0.15)
+    task.delay(0.1, function()
+        self.Main.Visible = false
+        if self.FloatBtn then
+            self.FloatBtn.Visible = true
+            -- Animation دخول منتصغّر
+            self.FloatBtn.Size = UDim2.fromOffset(FLOAT_SIZE * 0.5, FLOAT_SIZE * 0.5)
+            Tween(self.FloatBtn, {
+                Size = UDim2.fromOffset(FLOAT_SIZE, FLOAT_SIZE)
+            }, 0.25, Enum.EasingStyle.Back)
+        end
+    end)
+end
+
+function Window:RestoreFromFloat()
+    if self.FloatBtn then
+        Tween(self.FloatBtn, {
+            Size = UDim2.fromOffset(FLOAT_SIZE * 0.5, FLOAT_SIZE * 0.5)
+        }, 0.15)
+        task.delay(0.12, function()
+            self.FloatBtn.Visible = false
+            self.FloatBtn.Size = UDim2.fromOffset(FLOAT_SIZE, FLOAT_SIZE)
+        end)
+    end
+    task.delay(0.08, function()
+        self.Main.Visible = true
+        Tween(self.Main, { Size = UDim2.fromOffset(BASE_W, BASE_H) }, 0.25, Enum.EasingStyle.Back)
+    end)
 end
 
 function Window:MakeTab(opts)
@@ -445,9 +546,6 @@ function Tab:AddParagraph(opts)
     })
 end
 
--- ==========================================
--- BUTTON
--- ==========================================
 function Tab:AddButton(opts)
     opts = opts or {}
     local name     = opts.Name or "Button"
@@ -496,7 +594,6 @@ function Tab:AddButton(opts)
     })
     Corner(arrowBg, UDim.new(1, 0))
     local arrowSt = Stroke(arrowBg, C.White, 1)
-
     local arrowIcon = Create("ImageLabel", {
         Size = UDim2.new(0, 9, 0, 9),
         Position = UDim2.new(0.5, 1, 0.5, 0),
@@ -538,9 +635,6 @@ function Tab:AddButton(opts)
     end)
 end
 
--- ==========================================
--- TOGGLE
--- ==========================================
 function Tab:AddToggle(opts)
     opts = opts or {}
     local name     = opts.Name or "Toggle"
@@ -639,9 +733,6 @@ function Tab:AddToggle(opts)
     window.Flags[name] = state
 end
 
--- ==========================================
--- SLIDER
--- ==========================================
 function Tab:AddSlider(opts)
     opts = opts or {}
     local name     = opts.Name or "Slider"
@@ -798,9 +889,6 @@ function Tab:AddSlider(opts)
     window.Flags[name] = value
 end
 
--- ==========================================
--- TEXT INPUT
--- ==========================================
 function Tab:AddInput(opts)
     opts = opts or {}
     local name         = opts.Name or "Input"
@@ -874,9 +962,7 @@ function Tab:AddInput(opts)
         Parent = inputBox
     })
 
-    textBox.Focused:Connect(function()
-        Tween(inputSt, { Thickness = 1.6 }, 0.15)
-    end)
+    textBox.Focused:Connect(function() Tween(inputSt, { Thickness = 1.6 }, 0.15) end)
     textBox.FocusLost:Connect(function(enterPressed)
         Tween(inputSt, { Thickness = 1 }, 0.15)
         window.Flags[name] = textBox.Text
@@ -888,9 +974,6 @@ function Tab:AddInput(opts)
     window.Flags[name] = initial
 end
 
--- ==========================================
--- DROPDOWN
--- ==========================================
 function Tab:AddDropdown(opts)
     opts = opts or {}
     local name     = opts.Name or "Dropdown"
@@ -1064,7 +1147,6 @@ function redzlib:MakeWindow(opts)
     Stroke(main, C.White, 1.5)
     self.Main = main
 
-    -- Background
     local bgImage = Create("ImageLabel", {
         Name = "BackgroundImage",
         Size = UDim2.new(1, 0, 1, 0),
@@ -1097,7 +1179,6 @@ function redzlib:MakeWindow(opts)
     })
     self.TopBar = topbar
 
-    -- Logo
     Create("ImageLabel", {
         Size = UDim2.new(0, 26, 0, 26),
         Position = UDim2.new(0, 12, 0.5, -13),
@@ -1155,6 +1236,7 @@ function redzlib:MakeWindow(opts)
         Parent = topbar
     })
 
+    -- Close button (X) → يخفي النافذة ويظهر المربع العائم
     local closeBtn = Create("ImageButton", {
         Size = UDim2.new(0, 14, 0, 14),
         Position = UDim2.new(1, -25, 0.5, -7),
@@ -1164,7 +1246,9 @@ function redzlib:MakeWindow(opts)
         ZIndex = 3,
         Parent = topbar
     })
-    closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
+    closeBtn.MouseButton1Click:Connect(function()
+        self:MinimizeToFloat()
+    end)
 
     MakeDrag(main, topbar)
 
@@ -1178,7 +1262,6 @@ function redzlib:MakeWindow(opts)
     })
     self.Body = body
 
-    -- Sidebar (مصغّرة للموبايل)
     local sidebar = Create("ScrollingFrame", {
         Name = "Sidebar",
         Size = UDim2.new(0, 130, 1, -14),
@@ -1201,7 +1284,6 @@ function redzlib:MakeWindow(opts)
     end)
     self.Sidebar = sidebar
 
-    -- Content (عريض شوي عن الأول)
     local content = Create("Frame", {
         Name = "Content",
         Size = UDim2.new(1, -160, 1, -14),
@@ -1211,6 +1293,11 @@ function redzlib:MakeWindow(opts)
         Parent = body
     })
     self.Content = content
+
+    -- Floating button
+    self.FloatBtn = createFloatingButton(ScreenGui, function()
+        self:RestoreFromFloat()
+    end)
 
     self:Load()
     return self
